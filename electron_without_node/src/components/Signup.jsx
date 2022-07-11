@@ -22,10 +22,11 @@ const Signup = () => {
             await createUser(email, password).then((userCredential)=>{
                 updateProfile(userCredential.user, {
                     displayName: displayName,
-                    uid: userCredential.user.uid
+                    uid: userCredential.user.uid,
+                    email: userCredential.user.email
                 }).then(async ()=>{
                     const collectionRef = collection(db, "users")
-                    const payLoad = { displayName: displayName, uid: userCredential.user.uid}
+                    const payLoad = { displayName: displayName, uid: userCredential.user.uid, email: userCredential.user.email}
                     // console.log(payLoad)
                     const docRef = await addDoc(collectionRef, payLoad)
                     

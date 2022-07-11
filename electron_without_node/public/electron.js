@@ -11,6 +11,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
     },
+    icon: 'src/logo-desktop.ico'
   });
 
   // and load the index.html of the app.
@@ -45,3 +46,14 @@ app.on('activate', () => {
     createWindow();
   }
 });
+
+app.setUserActivity([
+  {
+    program: process.execPath,
+    arguments: '--new-window',
+    iconPath: process.execPath,
+    iconIndex: 0,
+    title: 'New Window',
+    description: 'Create a new window'
+  }
+])

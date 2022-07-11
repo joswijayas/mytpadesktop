@@ -2,6 +2,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from 'firebase/storage';
 import { getFID } from 'web-vitals';
 
 const app = firebase.initializeApp({
@@ -17,4 +18,5 @@ const app = firebase.initializeApp({
 
 export const db = getFirestore(app)
 export const auth = app.auth()
+export const storage = getStorage(app)
 export default app

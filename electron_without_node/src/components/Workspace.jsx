@@ -1,31 +1,78 @@
-import React, { useEffect, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import React, { createContext, useEffect, useState } from 'react'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import NavigationBar from './NavigationBar'
 import { Switch } from '@headlessui/react'
-import { addDoc, arrayUnion, collection, doc, getDoc, getDocs, query, updateDoc } from 'firebase/firestore'
+import { addDoc, arrayUnion, collection, doc, getDoc, getDocs, onSnapshot, query, updateDoc, where } from 'firebase/firestore'
 import { db } from '../firebase'
 import {UserAuth} from '../context/AuthContext'
 import { getAuth } from 'firebase/auth'
 import isWindows from 'cross-env/src/is-windows'
+import { WorkspaceProvider } from '../context/WorkspaceContext'
+import { WorkspaceGet } from '../context/WorkspaceContext'
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(' ')
 }
 
+// let xxx = WorkspaceProvider()
+// console.log(xxx)
+export const refreshContext = createContext()
 const Workspace = () => {
-
+  let count = 0;
   const {id} = useParams('')
+  // console.log('jhahah' + id)
   const [workspacename, setWorkspaceName] = useState('')
   const [workspacedesc, setWorkspaceDesc] = useState('')
   const [memberList, setMemberList] = useState([])
-  const [workspaces, setWorkspaces] = useState([])
   const [enabled, setEnabled] = useState(false)
-  
+  // const {getCurrentWorkspace} = WorkspaceGet()
   const navigate = useNavigate()
 
   const currAuth = getAuth()
   const user = currAuth.currentUser
   
+  let [workspace, setWorkspace] = useState([])
+  const[publicWorkspace, setPublicWorkspace] = useState([])
+  // setWorkspace(getCurrentWorkspace(id))
+  // workspace = getCurrentWorkspace(id)
+  const getCurrentWorkspace = (userId)=>{
+    let workspaceArr = []
+    
+    const queryState = query(collection(db, 'workspaces'), where('member', 'array-contains', userId))
+    onSnapshot(queryState, (e)=>{
+      workspaceArr = [];  
+      e.forEach(item =>{
+        workspaceArr.push({...item.data(), workspaceId:item.id})
+        // console.log(workspaceArr)
+        setWorkspace(workspaceArr)
+      })
+    })
+  }
+
+  const getPublicWorkspace = (userId)=>{
+    let workspacePublic = []
+    // console.log('masuk siniii')
+    const queryState = query(collection(db, 'workspaces'), where("type", "==", false))
+    onSnapshot(queryState, (e)=>{
+      workspacePublic = [];  
+      e.forEach(item =>{
+        workspacePublic.push({...item.data(), workspaceId:item.id})
+        // console.log('hahaaiajij'+workspacePublic)
+        setPublicWorkspace(workspacePublic)
+      })
+    })
+  }
+
+  const [refresh, setRefresh] = useState(false)
+  useEffect(()=>{
+    try {
+      getCurrentWorkspace(id)
+      getPublicWorkspace(id)
+    } catch (error) {
+      console.log(error.message)
+    }
+  }, [workspace], [publicWorkspace])
+
   const handleSubmit = async (e)=>{
     e.preventDefault()
     try {
@@ -73,19 +120,6 @@ const Workspace = () => {
     });
   })
 
-  // const getAllWorkspace = async()=>{
-  //   let workspaceArray = []
-  //   let exe = await getDocs(query(collection(db, 'workspaces')))
-  //   exe.forEach((e)=>{
-  //     workspaceArray.push(e)
-  //     setWorkspaces(workspaceArray)
-  //   })
-  // }
-
-  // function getWorkspace(){
-  //   const quer = query(collection, "users", user.uid)
-  // }
-
   const goAccount = async(e)=>{
       try {
         navigate(`/Account/${id}`)
@@ -95,81 +129,26 @@ const Workspace = () => {
       }
   }
 
+  const handleWorkspaceDetail = async(wid)=>{
+    try{
+      navigate(`/Workspace/${wid}`)
+    }catch(e){
+      console.log(e.message)
+    }
+  }
+
+  // const {useEffect} = WorkspaceGet()
+
 
   return (
     // <NavigationBar id = {id}>
     //   <div>Workspace</div>
     // </NavigationBar>
+    <refreshContext.Provider value={[refresh, setRefresh]}>
+      {/* <WorkspaceProvider setWorkspace={setWorkspace} workspace={workspace}></WorkspaceProvider> */}
+    {/* {console.log('update')} */}
     <div className="h-screen flex overflow-hidden bg-gray-100">
-    {/* <div class="fixed inset-0 flex z-40 md:hidden" role="dialog" aria-modal="true"> */}
-      
-      {/* <div class="fixed inset-0 bg-gray-600 bg-opacity-75" aria-hidden="true"></div> */}
-  
-     
-      {/* <div class="relative flex-1 flex flex-col max-w-xs w-full pt-5 pb-4 bg-white-700">
-       
-        <div class="absolute top-0 right-0 -mr-12 pt-2">
-          <button type="button" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
-            <span class="sr-only">Close sidebar</span>
-            <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-  
-        <div class="flex-shrink-0 flex items-center px-4">
-          <img class="h-8 w-auto" src="/img/logos/workflow-logo-indigo-300-mark-white-text.svg" alt="Workflow"></img>
-        </div>
-        <div class="mt-5 flex-1 h-0 overflow-y-auto">
-          <nav class="px-2 space-y-1">
-            <a href="#" class="bg-indigo-800 text-white group flex items-center px-2 py-2 text-base font-medium rounded-md">
-              <svg class="mr-4 h-6 w-6 text-indigo-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              Dashboard
-            </a>
-  
-            <a href="#" class="text-indigo-100 hover:bg-indigo-600 group flex items-center px-2 py-2 text-base font-medium rounded-md">
-              <svg class="mr-4 h-6 w-6 text-indigo-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              Team
-            </a>
-  
-            <a href="#" class="text-indigo-100 hover:bg-indigo-600 group flex items-center px-2 py-2 text-base font-medium rounded-md">
-              <svg class="mr-4 h-6 w-6 text-indigo-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
-              Projects
-            </a>
-  
-            <a href="#" class="text-indigo-100 hover:bg-indigo-600 group flex items-center px-2 py-2 text-base font-medium rounded-md">
-              <svg class="mr-4 h-6 w-6 text-indigo-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Calendar
-            </a>
-  
-            <a href="#" class="text-indigo-100 hover:bg-indigo-600 group flex items-center px-2 py-2 text-base font-medium rounded-md">
-              <svg class="mr-4 h-6 w-6 text-indigo-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-              </svg>
-              Documents
-            </a>
-  
-            <a href="#" class="text-indigo-100 hover:bg-indigo-600 group flex items-center px-2 py-2 text-base font-medium rounded-md">
-              <svg class="mr-4 h-6 w-6 text-indigo-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Reports
-            </a>
-          </nav>
-        </div>
-      </div> */}
-  
-      {/* <div class="flex-shrink-0 w-14" aria-hidden="true">
-      </div> */}
-    {/* </div> */}
+    
   
     <div className="hidden bg-white-700 md:flex md:flex-shrink-0">
       <div className="flex flex-col w-64">
@@ -197,6 +176,35 @@ const Workspace = () => {
                 </svg>
                 Workspace
               </a>
+              <h2 class="inline text-xl font-extrabold tracking-tight text-indigo-600 sm:block sm:text-xl">
+                Your Workspace
+              </h2>
+              {workspace.map((item)=>(
+                <Link to = {`/WorkspaceDetail/${item.workspaceId}`} className='h-10 bg-indigo-500 text-white group flex items-center text-sm font-medium rounded-md'>
+                <a key={count++} className="bg-indigo-500 text-white group flex items-center text-sm font-medium rounded-md">
+                {/* <!-- Heroicon name: outline/home --> */}
+                <svg className="ml-2 mr-3 h-6 w-6 text-white-32" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                  {item.title}
+                </a>
+                </Link>
+              ))}
+              <h2 class="inline text-xl font-extrabold tracking-tight text-indigo-600 sm:block sm:text-xl">
+                Public Workspace
+              </h2>
+
+              {publicWorkspace.map((item)=>(
+                <Link to = {`/WorkspaceDetail/${item.workspaceId}`} className='h-10 bg-indigo-500 text-white group flex items-center text-sm font-medium rounded-md'>
+                <a key={count++} className="bg-indigo-500 text-white group flex items-center text-sm font-medium rounded-md">
+                {/* <!-- Heroicon name: outline/home --> */}
+                <svg className="ml-2 mr-3 h-6 w-6 text-white-32" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                  {item.title}
+                </a>
+                </Link>
+              ))}
             </nav>
             
           </div>
@@ -303,6 +311,7 @@ const Workspace = () => {
 
     </div>
   </div>
+  </refreshContext.Provider>
   )
 }
 
